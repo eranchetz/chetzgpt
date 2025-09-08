@@ -162,12 +162,23 @@
         color: var(--text);
         padding: 12px 14px; border: 1px solid var(--border);
         border-radius: 12px; cursor: pointer; min-width: 120px; height: 52px;
+        position: relative; z-index: 2;
         font-weight: 600;
       }
       .send:hover { border-color: color-mix(in oklab, var(--border), var(--accent) 40%); }
       .send:disabled { opacity: 0.5; cursor: not-allowed; }
 
-      .note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+      .send .icon-send {
+        width: 18px; height: 18px; display: block;
+        stroke: currentColor; fill: none; stroke-width: 2;
+        transform-origin: 50% 50%;
+        transition: transform 120ms ease;
+      }
+      /* Use fill on the plane while preserving crisp edges */
+      .send .icon-send path { fill: currentColor; stroke: currentColor; stroke-linejoin: round; }
+      .send:hover .icon-send { transform: translateX(1px) translateY(-1px) rotate(-8deg); }
+
+      .note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; grid-column: 1 / -1; pointer-events: none; }
 
       code { background: var(--code); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
 
@@ -212,7 +223,12 @@
         <form class="composer" id="composer" autocomplete="off">
           <label class="sr-only" for="prompt">Message ChetzGPT</label>
           <textarea id="prompt" placeholder="Message ChetzGPT… (Enter to send, Shift+Enter for newline)" rows="3"></textarea>
-          <button class="send" id="sendBtn" type="submit">Send ⮞</button>
+          <button class="send" id="sendBtn" type="submit" aria-label="Send message">
+            <svg class="icon-send" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 11.5L21 3l-8.5 18-2.5-7-7-2.5Z"/>
+            </svg>
+            <span>Send</span>
+          </button>
           <div class="note">ChetzGPT makes things up on purpose. Do not trust anything.</div>
         </form>
       </footer>
@@ -425,6 +441,7 @@
         els.prompt.style.height = 'auto';
         addMessage('user', text);
         replyTo(text);
+        updateSendEnabled();
       }
 
       // Form submit
@@ -445,6 +462,13 @@
       };
       els.prompt.addEventListener('input', autoGrow);
       setTimeout(autoGrow, 0);
+
+      // Enable/disable send button based on input
+      const updateSendEnabled = () => {
+        els.send.disabled = !els.prompt.value.trim();
+      };
+      els.prompt.addEventListener('input', updateSendEnabled);
+      updateSendEnabled();
 
       // Clear chat
       els.clear.addEventListener('click', () => {
