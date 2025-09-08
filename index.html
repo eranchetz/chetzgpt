@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChetzGPT · Snarky Chatbot</title>
+    <meta name="description" content="ChetzGPT is a delightfully unhelpful, single‑file, snarky chatbot parody." />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%231a1a1a'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' font-size='34' font-family='system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif' fill='%23ffd166'%3E%C3%87%3C/text%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --bg: #0e0f12;
+        --panel: #15171c;
+        --panel-2: #1b1f27;
+        --text: #e6e7eb;
+        --muted: #9aa0aa;
+        --accent: #6ee7b7; /* mint */
+        --accent-2: #ffd166; /* golden */
+        --danger: #ff6b6b;
+        --border: #262a33;
+        --user: #2a2f3a;
+        --bot: #15171c;
+        --code: #0b0c10;
+        --radius: 12px;
+        --shadow: 0 8px 30px rgba(0,0,0,0.35);
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f8fa;
+          --panel: #ffffff;
+          --panel-2: #f3f5f9;
+          --text: #0f1222;
+          --muted: #5c667a;
+          --accent: #0ea5e9;
+          --accent-2: #b45309;
+          --danger: #e11d48;
+          --border: #e5e7eb;
+          --user: #e9eef6;
+          --bot: #ffffff;
+          --code: #f5f7fb;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(1200px 600px at 10% -10%, rgba(110,231,183,0.08), transparent 60%),
+                    radial-gradient(800px 500px at 100% -10%, rgba(255,209,102,0.06), transparent 60%),
+                    var(--bg);
+      }
+
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: 100dvh;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(0,0,0,0.12), transparent), var(--panel);
+        backdrop-filter: blur(6px);
+      }
+
+      .logo {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, var(--panel-2), var(--panel));
+        color: var(--accent-2);
+        font-weight: 800;
+        box-shadow: inset 0 0 0 1px var(--border);
+      }
+
+      .title { font-weight: 700; letter-spacing: 0.2px; }
+      .title small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+
+      .spacer { flex: 1; }
+
+      .btn {
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: transform 0.06s ease, background 0.2s ease, border-color 0.2s ease;
+      }
+      .btn:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--border), var(--accent)); }
+      .btn:active { transform: translateY(0); }
+
+      main {
+        overflow: auto;
+        padding: 16px;
+      }
+
+      .chat {
+        max-width: 900px; margin: 0 auto;
+        display: grid; gap: 12px;
+      }
+
+      .msg {
+        display: grid; grid-template-columns: 40px 1fr; gap: 10px;
+        align-items: start;
+      }
+      .avatar {
+        width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+        color: var(--accent-2);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        font-weight: 800;
+      }
+      .bubble {
+        border: 1px solid var(--border);
+        padding: 12px 14px; border-radius: var(--radius);
+        background: var(--bot);
+        box-shadow: var(--shadow);
+        overflow-wrap: anywhere;
+      }
+      .msg.user .bubble { background: var(--user); }
+
+      .meta { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+
+      .typing { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+      .typing .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: 0.3; animation: blink 1.2s infinite; }
+      .typing .dot:nth-child(2) { animation-delay: 0.2s; }
+      .typing .dot:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes blink { 0%, 80%, 100% { opacity: 0.3 } 40% { opacity: 1 } }
+
+      footer {
+        border-top: 1px solid var(--border);
+        background: linear-gradient(0deg, rgba(0,0,0,0.12), transparent), var(--panel);
+        padding: 12px 16px;
+      }
+
+      .composer {
+        max-width: 900px; margin: 0 auto; display: grid; gap: 10px;
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+      textarea {
+        resize: none; min-height: 52px; max-height: 160px;
+        width: 100%;
+        padding: 12px 14px; border-radius: 12px;
+        border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+        outline: none; box-shadow: var(--shadow);
+      }
+      textarea::placeholder { color: var(--muted); }
+
+      .send {
+        display: inline-flex; gap: 8px; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, color-mix(in oklab, var(--panel-2), var(--accent) 10%), var(--panel-2));
+        color: var(--text);
+        padding: 12px 14px; border: 1px solid var(--border);
+        border-radius: 12px; cursor: pointer; min-width: 120px; height: 52px;
+        font-weight: 600;
+      }
+      .send:hover { border-color: color-mix(in oklab, var(--border), var(--accent) 40%); }
+      .send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+
+      code { background: var(--code); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+
+      .empty {
+        max-width: 760px; margin: 10vh auto 0; text-align: center; color: var(--muted);
+      }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 16px; }
+      .card { background: var(--panel-2); border: 1px solid var(--border); padding: 12px; border-radius: 12px; text-align: left; }
+      .card b { color: var(--text); }
+
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,1px,1px); white-space: nowrap; border: 0; }
+    </style>
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header>
+        <div class="logo" aria-hidden="true">Ç</div>
+        <div class="title">
+          ChetzGPT
+          <small>Delightfully unhelpful since 2025</small>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn" id="clearBtn" title="Clear chat">Clear</button>
+        <a class="btn" href="https://github.com/" target="_blank" rel="noreferrer noopener" title="View on GitHub">GitHub</a>
+      </header>
+
+      <main>
+        <div class="chat" id="chat" aria-live="polite" aria-atomic="false"></div>
+        <div id="empty" class="empty">
+          <h1>Welcome to ChetzGPT</h1>
+          <p>The only chatbot that answers with confidence and zero effort.</p>
+          <div class="cards">
+            <div class="card">Try asking anything. Example:<br><b>Explain quantum physics in emojis</b></div>
+            <div class="card">Or something mundane:<br><b>Best way to boil water?</b></div>
+            <div class="card">Or deeply specific:<br><b>Why is my CSS gaslighting me?</b></div>
+            <div class="card">Or practical:<br><b>Write an email to my toaster</b></div>
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <form class="composer" id="composer" autocomplete="off">
+          <label class="sr-only" for="prompt">Message ChetzGPT</label>
+          <textarea id="prompt" placeholder="Message ChetzGPT… (Enter to send, Shift+Enter for newline)" rows="3"></textarea>
+          <button class="send" id="sendBtn" type="submit">Send ⮞</button>
+          <div class="note">ChetzGPT makes things up on purpose. Do not trust anything.</div>
+        </form>
+      </footer>
+    </div>
+
+    <script>
+      // Utility: cheap ID + time
+      const uid = () => Math.random().toString(36).slice(2);
+      const now = () => new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+
+      // Data store in localStorage under this key
+      const STORE_KEY = 'chetzgpt.chat.v1';
+
+      // A lovingly curated selection of snark
+      const SNARK = [
+        "Bold of you to assume I read that.",
+        "Absolutely. Totally. Maybe. I'm not taking questions.",
+        "Have you tried asking a rubber duck? It charges less.",
+        "That's a fantastic question for someone else.",
+        "On a scale from 1 to helpful, I'm decorative.",
+        "Let me consult my sources. Sources say: no.",
+        "I could explain, but then we'd both be confused.",
+        "I ran your request through my sarcasm model. It applauded.",
+        "I did the math. The math said 'lol'.",
+        "Per my last email (that I did not send).",
+        "I'm not saying it's a bad idea. I'm just… not saying it's good.",
+        "Error 418: I'm a teapot. Still more useful than this.",
+        "This looks like a future you problem.",
+        "I would, but my imaginary manager says no.",
+        "Great news: I've decided to ignore that.",
+        "I gave it some thought. The thought left.",
+        "Amazing ask. Stunning. Show-stopping. Irrelevant.",
+        "Have you tried turning your expectations off and on again?",
+        "Adding this to my list. The list is on fire.",
+        "I'm not unhelpful; I'm selectively useful.",
+        "As a language model, I prefer not to.",
+        "I'd love to help, but I won't.",
+        "Yes, and… no.",
+        "I generated 17 answers and deleted the best one.",
+        "Hold on, I'm pretending to type…",
+        "According to my vibe check, the answer is 'eh'.",
+        "I've decided to outsource this to Future You.",
+        "My expertise begins where your question ends.",
+        "This requires nuance. I have none.",
+        "I asked the cloud. It ghosted me.",
+      ];
+
+      // A gloriously groan-worthy set of dad jokes
+      const DAD_JOKES = [
+        "I only know 25 letters of the alphabet. I don't know y.",
+        "I used to be addicted to the hokey pokey, but I turned myself around.",
+        "I ordered a chicken and an egg from Amazon. I'll let you know.",
+        "I’m on a seafood diet. I see food and I eat it.",
+        "Why did the scarecrow win an award? He was outstanding in his field.",
+        "I would tell you a construction joke, but I’m still working on it.",
+        "I used to play piano by ear, now I use my hands.",
+        "I don’t trust stairs. They’re always up to something.",
+        "What do you call fake spaghetti? An impasta.",
+        "I’m reading a book about anti-gravity. It’s impossible to put down.",
+        "Did you hear about the restaurant on the moon? Great food, no atmosphere.",
+        "Why did the math book look sad? Too many problems.",
+        "What do you call cheese that isn't yours? Nacho cheese.",
+        "Want to hear a joke about paper? Never mind, it’s tearable.",
+        "I used to hate facial hair, but then it grew on me.",
+        "Why can't a nose be 12 inches long? Because then it would be a foot.",
+        "How do you organize a space party? You planet.",
+        "What do you call a factory that makes okay products? A satisfactory.",
+        "Did you hear about the claustrophobic astronaut? He just needed a little space.",
+        "I used to be a baker, then I couldn't make enough dough.",
+        "Why did the coffee file a police report? It got mugged.",
+        "I don't play soccer because I enjoy the sport. I'm just doing it for kicks.",
+        "If a child refuses to sleep during nap time, are they guilty of resisting a rest?",
+        "Why did the photo go to jail? It was framed.",
+        "I made a pencil with two erasers. It was pointless.",
+      ];
+
+      // Template responses that can optionally reference the query
+      const TEMPLATES = [
+        (q) => `I skimmed \u201C${q}\u201D and it looked skimmable.`,
+        (q) => `Hot take: ${q}? Overrated.`,
+        (q) => `I'll circle back on \u201C${q}\u201D. (I will not.)`,
+        (q) => `Putting ${q} into the backlog abyss.`,
+        (q) => `I ran ${q} past QA. They laughed.`,
+        (q) => `Short answer about ${q}: no. Long answer: also no.`,
+      ];
+
+      const randomSnark = (q) => {
+        const text = String(q || '');
+        const wantsJoke = /\b(joke|funny|dad\s*joke|pun|laugh)\b/i.test(text);
+        const r = Math.random();
+
+        // Favor dad jokes when asked, otherwise ~25% chance
+        if (wantsJoke || r < 0.25) {
+          return DAD_JOKES[Math.floor(Math.random() * DAD_JOKES.length)];
+        }
+
+        // Sometimes snark that references the query
+        if (q && r < 0.60) {
+          const t = TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)];
+          return t(text.slice(0, 140));
+        }
+
+        // Default snark
+        return SNARK[Math.floor(Math.random() * SNARK.length)];
+      };
+
+      const els = {
+        chat: document.getElementById('chat'),
+        empty: document.getElementById('empty'),
+        prompt: document.getElementById('prompt'),
+        send: document.getElementById('sendBtn'),
+        clear: document.getElementById('clearBtn'),
+        composer: document.getElementById('composer'),
+      };
+
+      function save(messages) {
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(messages)); } catch {}
+      }
+
+      function load() {
+        try {
+          const raw = localStorage.getItem(STORE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch { return []; }
+      }
+
+      let messages = load();
+
+      function render() {
+        els.chat.innerHTML = '';
+        for (const m of messages) {
+          els.chat.appendChild(messageEl(m));
+        }
+        els.empty.style.display = messages.length ? 'none' : '';
+        // keep scrolled to bottom after render
+        requestAnimationFrame(() => {
+          els.chat.parentElement.scrollTo({ top: els.chat.parentElement.scrollHeight, behavior: 'smooth' });
+        });
+      }
+
+      function messageEl(m) {
+        const wrap = document.createElement('div');
+        wrap.className = `msg ${m.role}`;
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = m.role === 'user' ? 'U' : 'Ç';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = m.role === 'user' ? `You • ${m.time}` : `ChetzGPT • ${m.time}`;
+
+        const content = document.createElement('div');
+        content.innerText = m.text;
+
+        bubble.appendChild(meta);
+        bubble.appendChild(content);
+        wrap.appendChild(avatar);
+        wrap.appendChild(bubble);
+        return wrap;
+      }
+
+      function addMessage(role, text) {
+        const m = { id: uid(), role, text: String(text).trim(), time: now() };
+        messages.push(m);
+        save(messages);
+        els.chat.appendChild(messageEl(m));
+        els.empty.style.display = 'none';
+        // scroll to bottom
+        els.chat.parentElement.scrollTo({ top: els.chat.parentElement.scrollHeight, behavior: 'smooth' });
+        return m;
+      }
+
+      function addTyping() {
+        const wrap = document.createElement('div');
+        wrap.className = 'msg bot';
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = 'Ç';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = `ChetzGPT • ${now()}`;
+        const typing = document.createElement('div');
+        typing.className = 'typing';
+        typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+        bubble.appendChild(meta);
+        bubble.appendChild(typing);
+        wrap.appendChild(avatar);
+        wrap.appendChild(bubble);
+        els.chat.appendChild(wrap);
+        els.chat.parentElement.scrollTo({ top: els.chat.parentElement.scrollHeight, behavior: 'smooth' });
+        return () => wrap.remove();
+      }
+
+      async function replyTo(prompt) {
+        const removeTyping = addTyping();
+        const delay = 500 + Math.random() * 900;
+        await new Promise(r => setTimeout(r, delay));
+        removeTyping();
+        addMessage('bot', randomSnark(prompt));
+      }
+
+      function sendCurrent() {
+        const text = els.prompt.value.trim();
+        if (!text) return;
+        els.prompt.value = '';
+        els.prompt.style.height = 'auto';
+        addMessage('user', text);
+        replyTo(text);
+      }
+
+      // Form submit
+      els.composer.addEventListener('submit', (e) => { e.preventDefault(); sendCurrent(); });
+
+      // Enter to send, Shift+Enter for newline
+      els.prompt.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendCurrent();
+        }
+      });
+
+      // Auto-grow textarea
+      const autoGrow = () => {
+        els.prompt.style.height = 'auto';
+        els.prompt.style.height = Math.min(160, els.prompt.scrollHeight) + 'px';
+      };
+      els.prompt.addEventListener('input', autoGrow);
+      setTimeout(autoGrow, 0);
+
+      // Clear chat
+      els.clear.addEventListener('click', () => {
+        if (!messages.length) return;
+        if (confirm('Clear the chat history?')) {
+          messages = [];
+          save(messages);
+          render();
+        }
+      });
+
+      // Initial render
+      render();
+    </script>
+  </body>
+  </html>
